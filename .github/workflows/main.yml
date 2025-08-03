@@ -5,6 +5,9 @@ on:
   push:
     branches:
       - release
+      - main
+    tags:
+      - 'v*'
 
 jobs:
   publish-tauri:
@@ -54,13 +57,14 @@ jobs:
         uses: swatinem/rust-cache@v2
         with:
           workspaces: './src-tauri -> target'
-
-      # - name: install frontend dependencies
-      #   # If you don't have `beforeBuildCommand` configured you may want to build your frontend here too.
-      #   run: pnpm install # change this to npm or pnpm depending on which one you use.
+          # Add unique cache key for each platform and target
+          shared-key: ${{ matrix.platform }}-${{ hashFiles('src-tauri/Cargo.lock') }}
 
       - name: install frontend dependencies
         run: pnpm install
+
+      - name: Build frontend (for debugging)
+        run: pnpm build
 
       - uses: tauri-apps/tauri-action@v0
         env:
@@ -71,5 +75,7 @@ jobs:
           releaseName: 'App v__VERSION__'
           releaseBody: 'See the assets to download this version and install.'
           releaseDraft: true
-          prerelease: false
+          prerelease: true
           args: ${{ matrix.args }}
+          includeDebug: false
+          includeRelease: true
