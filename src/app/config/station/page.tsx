@@ -1,5 +1,5 @@
 'use client';
-import { getTubeLines, getTubeStations } from "@/actions/tfl";
+import { getTubeLines, getTubeStations } from "@/lib/tfl-client";
 import { Separator } from "@/components/ui/separator";
 import { getLineColor } from "@/lib/tls";
 import { Line, StopPoint } from "@/models/tfl";

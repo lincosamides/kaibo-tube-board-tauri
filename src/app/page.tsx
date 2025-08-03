@@ -1,8 +1,8 @@
 'use client'
-import { getArrivalsForStation, getStationById } from "@/actions/tfl";
+import { getArrivalsForStation, getStationById } from "@/lib/tfl-client";
 import { checkInternetConnection } from "@/actions/network";
 import { Arrival, StopPoint } from "@/models/tfl";
-import { useEffect, useRef, useState } from "react"
+import { useEffect, useRef, useState, Suspense } from "react"
 import Link from "next/link"
 import { useSearchParams } from "next/navigation";
 import { getLineColor } from "@/lib/tls";
@@ -91,22 +91,24 @@ function renderArrivalList(arrivals: Arrival[], elapsedSeconds: number) {
   )
 }
 
-function renderBoardFooter(station: StopPoint | null, selectedPlatform: number, setSelectedPlatform: (platform: number) => void, isClient: boolean) {
+function renderBoardFooter(station: StopPoint | null, selectedPlatform: number, setSelectedPlatform: (platform: number) => void, isClient: boolean, board: number, setBoard: (board: number) => void) {
   return (
-    <div className="flex items-center justify-center p-2 gap-2 text-yellow-400">
-      {station && station.platformCount >= 2 && (
-        <>
-          <button
-            onClick={() => setSelectedPlatform(selectedPlatform >= station.platformCount ? 1 : selectedPlatform + 1)}
-            className={`text-sm hover:text-gray-300 focus:outline-none cursor-pointer ${pressStart2P.className}`}
-          >
-            Platform {selectedPlatform}
-          </button>
-          <span className={`text-xs ${pressStart2P.className}`}>-</span>
-        </>
-      )}
-      {isClient &&
-        <Clock className={`text-sm ${pressStart2P.className}`} format={'HH:mm:ss'} ticking={true} timezone={'Europe/London'} />}
+    <div className="flex flex-col items-center">
+      <div className="flex items-center justify-center p-2 gap-2 text-yellow-400">
+        {station && station.platformCount >= 2 && (
+          <>
+            <button
+              onClick={() => setSelectedPlatform(selectedPlatform >= station.platformCount ? 1 : selectedPlatform + 1)}
+              className={`text-sm hover:text-gray-300 focus:outline-none cursor-pointer ${pressStart2P.className}`}
+            >
+              Platform {selectedPlatform}
+            </button>
+            <span className={`text-xs ${pressStart2P.className}`}>-</span>
+          </>
+        )}
+        {isClient &&
+          <Clock className={`text-sm ${pressStart2P.className}`} format={'HH:mm:ss'} ticking={true} timezone={'Europe/London'} />}
+      </div>
     </div>
   )
 }
@@ -255,6 +257,14 @@ function renderNoInternet(timeToAge: TimeToAge | null, currentAvatar: number, fi
 }
 
 export default function Home() {
+  return (
+    <Suspense fallback={<div className="w-[480px] h-[320px] bg-black flex items-center justify-center text-white">Loading...</div>}>
+      <HomeContent />
+    </Suspense>
+  );
+}
+
+function HomeContent() {
   const birthdate = new Date("2003-08-03T00:50:00+08:00");
   const searchParams = useSearchParams()
   const stationId = searchParams.get('stationId') || "940GZZLUHSD";
@@ -271,6 +281,8 @@ export default function Home() {
   const [arrivalsTimestamp, setArrivalsTimestamp] = useState<number>(Date.now());
   const [elapsedSeconds, setElapsedSeconds] = useState<number>(0);
   const [selectedPlatform, setSelectedPlatform] = useState<number>(1);
+
+  const [board, setBoard] = useState<number>(1);
 
   // Avatar switching effect - sync with animation cycle
   useEffect(() => {
@@ -413,7 +425,7 @@ export default function Home() {
 
   return (
     <div className="w-[480px] h-[320px] text-white flex flex-col cursor-none">
-      {!isConnected ? (
+      {board === 1 && isConnected ? (
         <>
           {station && renderBoardTitle(station)}
           <div className="flex-1">
@@ -424,13 +436,18 @@ export default function Home() {
               </span>
             </div>
           </div>
-          {renderBoardFooter(station, selectedPlatform, setSelectedPlatform, isClient)}
+          {renderBoardFooter(station, selectedPlatform, setSelectedPlatform, isClient, board, setBoard)}
         </>
       ) : (
         <div className="flex-1 flex items-center justify-center bg-black">
           {renderNoInternet(timeToAge, currentAvatar, fireworksRef, showFireworks)}
         </div>
       )}
+
+      <button className={`w-full flex items-center justify-center p-0.5 text-xs bg-white text-black ${pressStart2P.className}`} 
+          onClick={() => setBoard(board === 1 ? 2 : 1)}>
+          {board === 1 ? 'Kaibo\'s Tube Board' : 'Let\'s Celebrate Kaibo\'s Birthday!'}
+      </button>
     </div>
   );
 }
